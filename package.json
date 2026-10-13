@@ -33,11 +33,11 @@
   "author": "xingkong <778412065@qq.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xingkong/dsh-plugin-cdp.git"
+    "url": "git+https://github.com/joansgwjbsu/dsh-plugin-cdp.git"
   },
-  "homepage": "https://github.com/xingkong/dsh-plugin-cdp#readme",
+  "homepage": "https://github.com/joansgwjbsu/dsh-plugin-cdp#readme",
   "bugs": {
-    "url": "https://github.com/xingkong/dsh-plugin-cdp/issues"
+    "url": "https://github.com/joansgwjbsu/dsh-plugin-cdp/issues"
   },
   "dsh": {
     "bundle": {
