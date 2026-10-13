@@ -1,0 +1,55 @@
+{
+  "name": "dsh-plugin-cdp",
+  "version": "0.2.0",
+  "description": "DeepSeek Harness plugin: Chrome DevTools Protocol (CDP) automation with a managed Chrome instance, plus a popup-driven rule collector, text dashboards for job/salary/location data, and zero-downtime hot-swap of a long-running worker.",
+  "type": "module",
+  "main": "lib/index.mjs",
+  "exports": {
+    ".": {
+      "default": "./lib/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/*.mjs",
+    "!lib/*.test.mjs",
+    "!lib/selftest.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "UPDATES.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "cdp",
+    "chrome-devtools-protocol",
+    "automation",
+    "browser"
+  ],
+  "license": "MIT",
+  "author": "xingkong",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xingkong/dsh-plugin-cdp.git"
+  },
+  "homepage": "https://github.com/xingkong/dsh-plugin-cdp#readme",
+  "bugs": {
+    "url": "https://github.com/xingkong/dsh-plugin-cdp/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-tools": "^0.1.5-rc.3 || ^0.2.0-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
