@@ -1,0 +1,3 @@
+- insert:
+    - id: cdp
+      name: "dsh-plugin-cdp"
