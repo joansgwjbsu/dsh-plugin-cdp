@@ -1,48 +1,57 @@
-# dsh-plugin-cdp 发布指南
+# dsh-plugin-cdp 发布指南（GitHub 路线）
 
-> 目标：把插件发布到 npm，推送到 GitHub，并提交到 DSH 插件市场（awesome-dsh-plugin）。
+> **不需要 npm。** 经核实 `awesome-dsh-plugin` 的收录要求，npm 只是「推荐」——
+> 把预构建 tarball 挂到 GitHub Release，用 `tarball:` 字段指向即可。
 >
-> **为什么需要你亲自执行**：发布是**不可逆的公开操作**，需要你的 npm 账号登录态与 GitHub 认证。这些凭据只能由你本人提供，我不能替你登录你的账号。其余准备工作（仓库、元数据、打包产物）已全部完成。
+> 这条路线正好绕开了你遇到的 npm 注册风控。
+>
+> **我无法代你执行**：推送与提 PR 需要你的 GitHub 凭据（你浏览器里已登录，我这边没有）。
 
 ---
 
-## 当前准备状态（已完成）
+## 准备状态（已完成）
 
-| 项目 | 状态 |
+| 项 | 状态 |
 | --- | --- |
-| 包名 `dsh-plugin-cdp` 在 npm 上是否可用 | ✅ **未被占用**（已查 404） |
-| `package.json` | ✅ 已补 `version` `license` `repository` `homepage` `bugs` `keywords` `author` `engines` |
-| 版本号 | ✅ 已从 `0.1.0` 升到 **`0.2.0`** |
-| `README.md` | ✅ 已写（中英双语） |
-| `UPDATES.md` | ✅ 更新说明 |
-| `LICENSE` | ✅ MIT |
-| `.gitignore` | ✅ 已写（排除 `node_modules/` `*.tgz`） |
-| npm 包内容 | ✅ 已排除测试文件，13 个文件 / 77.6 kB |
-| git 仓库 | ✅ 已 `git init` 并完成 2 次提交 |
-| 本地打包产物 | ✅ `dsh-plugin-cdp-0.2.0.tgz` |
+| 收录格式 | ✅ 已从 `contributing.md` 逐条核实 |
+| 提交条目 | ✅ 已写好并校验（`awesome-entry.yml`） |
+| `package.json` 声明 `dsh.bundle` | ✅ `./cordis.patch.yml` |
+| 根目录 `cordis.patch.yml` | ✅ |
+| 真实可用代码 | ✅ 12 个模块 |
+| `README.md` / `UPDATES.md` / `LICENSE` | ✅ |
+| 版本号 | ✅ `0.2.0` |
+| 预构建 tarball | ✅ `dsh-plugin-cdp-0.2.0.tgz`（77.6 kB） |
+| git 仓库 | ✅ 已 init + 4 次提交，21 个文件 |
 | 全部测试 | ✅ 161 项断言 + 自检，退出码全 0 |
 
-**打包内容**（`npm pack --dry-run` 实测）：
+---
 
-```
-LICENSE   README.md   UPDATES.md   cordis.patch.yml   package.json
-lib/contract.mjs   lib/index.mjs   lib/jobs.mjs   lib/logs.mjs
-lib/prefs.mjs      lib/report.mjs  lib/supervisor.mjs  lib/worker.mjs
-```
+## 收录的硬性要求（逐条对照）
 
-> 测试文件（`*.test.mjs`）与 `selftest.mjs` 已被排除在 npm 包外，但仍保留在 git 仓库里。
+来自 [`contributing.md`](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/contributing.md)：
+
+| 要求 | 你的状态 |
+| --- | --- |
+| `package.json` 声明 `dsh.bundle` manifest | ✅ |
+| 仓库含真实可用代码（非占位、非纯 README） | ✅ |
+| **仓库创建满 1 天**（CI 自动检查） | ⏳ **唯一的时间门槛** |
+| 仓库加 `dsh-plugin` topic | ⏳ 见第 2 步 |
+| 描述如实、无营销词 | ✅ |
+| 每个插件一个文件 `data/plugins/<owner>__<repo>.yml` | ✅ 已备好 |
+
+> ⚠️ 最常见的被拒原因是**只声明了 `dsh.client` 而没有 `dsh.bundle`**——那样无法安装。你的已经声明了。
 
 ---
 
-## 第 1 步：在 GitHub 建仓库并推送
+## 第 1 步：建仓库并推送
 
-浏览器打开 <https://github.com/new>，**不要**勾选 "Add a README file"、不要加 `.gitignore`、不要选 license（这些本地都已存在），仓库名填：
+浏览器打开 <https://github.com/new>
 
-```
-dsh-plugin-cdp
-```
+- 仓库名：`dsh-plugin-cdp`
+- 可见性：**Public**
+- **不要**勾 "Add a README file"、**不要**加 `.gitignore`、**不要**选 license（本地都已存在）
 
-保持 **Public**（提交到市场通常要求公开可访问），创建后执行：
+创建后执行：
 
 ```powershell
 cd D:\dsh\dsh-plugin-cdp
@@ -52,147 +61,117 @@ git branch -M main
 git push -u origin main
 ```
 
-推送时会要求登录 GitHub。若用 HTTPS 需要 **Personal Access Token**（GitHub 已不支持密码推送）：
-`Settings → Developer settings → Personal access tokens → Fine-grained tokens`，权限给该仓库的 **Contents: Read and write**。
+推送会要求登录。GitHub **已不支持密码推送**，用 Personal Access Token 当密码：
+`Settings → Developer settings → Personal access tokens → Fine-grained tokens`，
+权限给该仓库 **Contents: Read and write**。
 
 ---
 
-## 第 2 步：登录 npm 并发布
+## 第 2 步：加 `dsh-plugin` topic
 
-```powershell
-# 1) 登录（会打开浏览器或要求输入用户名/密码/一次性验证码）
-npm login --registry=https://registry.npmjs.org/
+仓库页面右侧 **About** 齿轮图标 → **Topics** → 输入 `dsh-plugin` → 保存。
 
-# 2) 确认登录身份
-npm whoami --registry=https://registry.npmjs.org/
+（也可以在推送后让我用 API 加，需要一个临时 token。）
 
-# 3) 发布前先干跑一次，确认内容无误
-cd D:\dsh\dsh-plugin-cdp
-npm publish --dry-run --registry=https://registry.npmjs.org/
+---
 
-# 4) 正式发布
-npm publish --registry=https://registry.npmjs.org/
-```
+## 第 3 步：建 Release 并上传 tarball
 
-> ⚠️ **你的 npm registry 当前指向 `https://registry.npmmirror.com`（淘宝镜像）**。镜像**只能读、不能发布**，所以上面每条命令都必须显式带 `--registry=https://registry.npmjs.org/`。
+仓库页面 → **Releases** → **Draft a new release**
+
+- **Tag**：`v0.2.0`（点 "Create new tag"）
+- **Title**：`dsh-plugin-cdp 0.2.0`
+- **Attach binaries**：上传 `D:\dsh\dsh-plugin-cdp\dsh-plugin-cdp-0.2.0.tgz`
+
+> 附件名必须与 `tarball:` 字段里的文件名一致：
+> `https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/latest/download/dsh-plugin-cdp-0.2.0.tgz`
 >
-> 若想永久改回官方源：`npm config set registry https://registry.npmjs.org/`
-
-发布成功后验证：
-
-```powershell
-npm view dsh-plugin-cdp --registry=https://registry.npmjs.org/
-```
+> 若想改成别的文件名，两边都要改。
 
 ---
 
-## 第 3 步：提交到 DSH 插件市场
+## 第 4 步：等满 1 天，然后提 PR
 
-**这一步的提交格式我没有核实成功**，原因需要你知道：`github.com` 与 `raw.githubusercontent.com` 在你的网络里被解析到非公网 IP，被网络策略挡住了，我取不到 `awesome-dsh-plugin` 的 `contributing.md`。
+CI 会检查仓库年龄。**建仓库的当天提交会被自动拒**——不是对插件质量的判断，只是为了过滤「PR 前几分钟才建好」的仓库。明天再提即可，重新提交没有负面影响。
 
-请按以下方式获取确切格式，**不要凭猜测提 PR**（格式不对会被直接关闭）：
+### 提 PR 的步骤
 
-1. 浏览器打开 <https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/contributing.md>
-2. 看 "How submissions are reviewed" 一节对**条目格式**的要求
-3. 参照最近一个真实 PR 的改法：<https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pulls>（搜 `Add ` 前缀的 PR）
+1. 打开 <https://github.com/awesome-dsh-plugin/awesome-dsh-plugin>
+2. **Fork** 该仓库
+3. 在你 fork 里新建文件：`data/plugins/joansgwjbsu__dsh-plugin-cdp.yml`
+   （注意是**两个下划线** `__`）
+4. 内容（即 `D:\dsh\dsh-plugin-cdp\awesome-entry.yml` 去掉注释后的部分）：
 
-### PR 文案（可直接用）
+```yaml
+url: https://github.com/joansgwjbsu/dsh-plugin-cdp
+name: joansgwjbsu/dsh-plugin-cdp
+category: browser
+tarball: https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/latest/download/dsh-plugin-cdp-0.2.0.tgz
+description:
+  en: Drives a self-managed Chrome instance over the Chrome DevTools Protocol through 15 tools, including a verified-click primitive that waits for the detail panel to settle and refuses when the panel content disagrees with the selected item; ships no rules of its own and instead collects user preferences through a popup questionnaire, renders job, salary and location data as zero-dependency Unicode charts and monospace tables, and hot-swaps a long-running worker by starting a new generation and confirming it is alive before retiring the old one.
+  zh: 通过 15 个工具以 Chrome DevTools Protocol 驱动一个自管理的 Chrome 实例，其中包含一个「校验后再点击」的原语：等详情面板稳定、并在面板内容与所选项不一致时拒绝操作；插件本身不携带任何规则，改为用弹窗问卷收集用户偏好；把岗位、薪资、地点数据渲染成零依赖的 Unicode 图表与等宽表格；并以「先起新一代、确认存活，再让老一代退位」的方式热替换长驻运行器。
+```
 
-**标题：**
+5. 提交 PR。
+
+### PR 标题
 
 ```
 Add joansgwjbsu/dsh-plugin-cdp
 ```
 
-**正文：**
+### PR 正文
 
 ```markdown
-## 插件信息
+Adds `data/plugins/joansgwjbsu__dsh-plugin-cdp.yml`.
 
-- **名称**：dsh-plugin-cdp
-- **仓库**：https://github.com/joansgwjbsu/dsh-plugin-cdp
-- **npm**：https://www.npmjs.com/package/dsh-plugin-cdp
-- **License**：MIT
-- **Node**：>= 22
+- Repo: https://github.com/joansgwjbsu/dsh-plugin-cdp
+- `package.json` declares `dsh.bundle` → `./cordis.patch.yml` (present at repo root)
+- Category: `browser` — the plugin's core is driving a Chrome instance over CDP
+- Not published to npm; a prebuilt tarball is attached to the latest GitHub Release
+  and referenced with the `tarball:` field
+- 15 tools, zero runtime dependencies (Node built-in `fetch` + `WebSocket` only)
+- 161 local assertions plus a plugin self-test, all passing
 
-## 它做什么
-
-用 Chrome DevTools Protocol 驱动一个**自管理**的 Chrome 实例，为 DSH 提供浏览器自动化能力，
-并附带三个额外能力：
-
-1. **弹窗收集规则**——插件**本身不携带任何规则**。首次使用时返回问卷，由 DSH 内置的
-   `ask_user_question` 弹窗询问岗位方向、工作地点、薪资下限、投递平台、浏览器、排除规则，
-   答案落盘后不再重复询问。规则类问题**不预置选项、不标 Recommended**——预置选项等于把
-   某个人的规则当成新用户的默认答案。
-2. **零依赖文本可视化**——用 Unicode 字符画薪资直方图、地点条形图、投递火花线与等宽明细表。
-   中文按双宽计算，表格列不会错位（实测 5 张表 / 113 行，竖线列位完全一致）。
-3. **无停机热替换**——规则变化时**先起新一代、确认存活，再让老一代退位**，而不是原地重启
-   （原地重启必然有一段「没有任何进程在跑」的真空期）。两代共享 **append-only** 状态，
-   所以重叠期不会重复做事；新一代若起不来，**保留老一代继续运行**。
-
-## 为什么用 CDP 而不是浏览器扩展通道
-
-扩展通道驱动不了部分站点：受控标签页会被目标站点清空、借用的用户标签页同样变空白，
-且页面会报告成功对话框而操作并未真正生效。本插件自带实例、直接说 CDP，并强制
-「可验证的操作流程」——`cdp_apply_verified` 要求详情面板标题连续 3 次读数稳定、
-面板薪资与卡片薪资逐字相同，否则拒绝点击。
-
-## 质量
-
-- **零运行时依赖**（仅用 Node 内置 `fetch` + `WebSocket`）
-- **161 项本地断言** + 插件加载自检，全部通过
-- 自检覆盖三类**只有宿主才会拒绝**的错误：`output.schema` 漏声明字段、
-  返回值含 `undefined`（非合法 JSON）、输出未通过 `validateJsonSchemaValue`
-
-## 备注
-
-15 个工具，`dsh` bundle patch 位于 `cordis.patch.yml`。
+This PR adds one file and modifies no existing entry.
 ```
+
+> 最后一句值得留着——评审明确会看「PR 是否动了与它无关的条目」，主动声明能省一轮沟通。
 
 ---
 
-## 第 4 步：发布后自检
+## 提交后会发生什么
 
-```powershell
-# 在一个干净目录里装一遍，确认包能正常解析
-mkdir $env:TEMP\cdp-install-test; cd $env:TEMP\cdp-install-test
-npm init -y | Out-Null
-npm i dsh-plugin-cdp --registry=https://registry.npmjs.org/
-node -e "import('dsh-plugin-cdp').then(m=>console.log('name:',m.name,'| apply:',typeof m.apply))"
-```
-
-预期输出：
-
-```
-name: dsh-plugin-cdp | apply: function
-```
+- **CI 先跑**：校验 manifest、仓库年龄、YAML 格式、README 能否重新生成。CI 绿了只是前提，不是结论。
+- **维护者会实际读你的仓库**，核对描述与代码是否一致（包括描述里的数字与 API 名称）。
+- README 由脚本从 `data/plugins/*.yml` 生成，**合并后自动更新，你不需要也不应该手改**。
+- 被打回会以 PR 评论明确写出要改什么；因描述不准确被打回不是对插件的否定，改好即可。
 
 ---
 
 ## 常见问题
 
-**Q：`npm publish` 报 `ENEEDAUTH`**
-A：没登录，先 `npm login`。
+**Q：一定要发 npm 吗？**
+A：不必。npm 只是「推荐」（预构建安装在装的时候免 `allowBuilds` 构建授权）。用 GitHub Release 附件 + `tarball:` 字段即可。
 
-**Q：`npm publish` 报 `E403` 或 `cannot publish over existing version`**
-A：版本号已被占用。改 `package.json` 的 `version`（如 `0.2.1`）后重新发布。npm **不允许覆盖已发布版本**。
+**Q：`npm login` 报 `ENEEDAUTH` / 网站打不开？**
+A：你遇到的 npm 网站风控。**这条路线完全不需要 npm**，忽略即可。順带一提：本机 `registry.npmjs.org` 其实是通的（实测 HTTP 200），被挡的只有 `www.npmjs.com` 网页。
 
-**Q：推送到 GitHub 报 `Authentication failed`**
-A：GitHub 不支持密码推送，用 Personal Access Token 代替密码；或配置 SSH key。
+**Q：现在就能提 PR 吗？**
+A：仓库满 1 天后。CI 会拒当天建的仓库。
 
-**Q：想先不公开、只自己用**
-A：跳过第 1、3 步，只做第 2 步（npm 包可以是公开的但仓库保持私有），或者干脆只用本地的
-`dsh-plugin-cdp-0.2.0.tgz` 分发：
+**Q：想先不公开、只自己用？**
+A：跳过全部步骤，直接本地装：
 ```powershell
 npm i D:\dsh\dsh-plugin-cdp\dsh-plugin-cdp-0.2.0.tgz
 ```
 
-**Q：发错了想撤销**
-A：发布 72 小时内可 `npm unpublish dsh-plugin-cdp@0.2.0`，但**强烈不建议**——已被别人安装的包会断掉。正确做法是发一个新版本修正。
+**Q：`github.com` 打不开怎么办？**
+A：浏览器能开（你能发仓库）；命令行推送走 `github.com` 的 git 协议，若也受限可用代理，或在 GitHub 网页上直接上传文件（Add file → Upload files）。
 
 ---
 
 ## 需要我继续做什么
 
-- 你拿到 `contributing.md` 的条目格式后贴给我，我按格式写好那一条
-- 需要我改版本号、补充 README 章节、或调整 PR 文案，说一声即可
+- 给我一个临时 token，我可以用 GitHub API 完成**加 topic、建 Release 并上传附件**这两步（推送代码仍需你在网页操作或本地有凭据）
+- 想改描述措辞、分类、或 tarball 文件名，说一声
