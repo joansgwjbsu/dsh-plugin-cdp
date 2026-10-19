@@ -40,6 +40,8 @@
 > **注意**：DSH 升级后，请确认 profile 里的 `@deepseek-ai` 包也已拉齐到同版本。
 > 应用更新**不会**自动刷新 profile 的依赖树。详见 [UPDATES.md](./UPDATES.md)。
 
+各版本的封装产物、SHA256 与「该用哪个版本」见 **[RELEASES.md](./RELEASES.md)**。
+
 自查一条命令（在**仓库目录**执行；单元测试文件不随 npm 包分发）：
 
 ```sh
