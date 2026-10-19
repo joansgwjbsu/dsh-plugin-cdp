@@ -22,6 +22,28 @@
 
 ---
 
+## 兼容性
+
+| 项目 | 要求 |
+| --- | --- |
+| DeepSeek Harness | `0.2.0-rc.2` 及以上；**已验证 0.2.1-rc.2** |
+| `@deepseek-ai/dsh-tools` | `^0.1.5-rc.3 \|\| ^0.2.0-rc.1 \|\| ^0.2.1-rc.2`（peer，由宿主提供） |
+| `@deepseek-ai/schemastery` | `^3.18.2`（peer，由宿主提供） |
+| `@deepseek-ai/cordis` | `^4.0.2`（peer，由宿主提供） |
+| Node | ≥ 22（宿主自带 Node 24，无需另装） |
+
+> **注意**：DSH 升级后，请确认 profile 里的 `@deepseek-ai` 包也已拉齐到同版本
+> （在 profile 目录跑一次 `pnpm install`）。应用更新**不会**自动刷新 profile 的依赖树，
+> 版本不一致会影响所有插件，不只是本插件。详见 [UPDATES.md](./UPDATES.md)。
+
+自查一条命令（在**仓库目录**执行；单元测试文件不随 npm 包分发）：
+
+```sh
+node run-all-tests.mjs
+```
+
+---
+
 ## 安装
 
 ```sh
