@@ -1,5 +1,161 @@
 # dsh-plugin-cdp 更新说明
 
+---
+
+# 0.2.1（2026-10-19）—— 适配 DSH 0.2.1-rc.2
+
+> 上一版：`0.2.0`，为 DSH `0.2.0-rc.2` 编写
+> 本次：`0.2.1`，对齐 DSH `0.2.1-rc.2`（桌面端 2026-10-17 更新）
+> 结论：**API 无破坏性变更；真正要修的是「版本声明」和「重复依赖」**
+
+## 为什么必须做这次适配
+
+DSH 从 `0.2.0-rc.2` 升到 `0.2.1-rc.2` 后，随包分发的三个共享包也一起升了：
+
+| 包 | DSH 0.2.0-rc.2 提供 | DSH 0.2.1-rc.2 提供 | 插件原先自带 |
+| --- | --- | --- | --- |
+| `@deepseek-ai/dsh-tools` | 0.2.0-rc.2 | **0.2.1-rc.2** | 0.2.0-rc.2（旧） |
+| `@deepseek-ai/schemastery` | 3.18.4 | **3.18.5** | 3.18.4（旧） |
+| `@deepseek-ai/cordis` | 4.0.4 | **4.0.5** | 4.0.4（旧） |
+
+DSH 在 `resources/app.asar/dsh/desktop-runtime.json` 里声明了 **304 个 sharedPackages**
+（宿主统一提供的包），插件本应从宿主拿这些包。但本插件此前在自己的 `node_modules`
+里带了一份 0.2.0-rc.2 的副本，于是出现两个问题。
+
+### 问题 1：peer 依赖范围已经匹配不上新版本
+
+插件原来声明：
+
+```json
+"@deepseek-ai/dsh-tools": "^0.1.5-rc.3 || ^0.2.0-rc.1"
+```
+
+按 npm 的 semver 规则，**预发布版本只有在 major.minor.patch 元组相同时才可能匹配**。
+所以 `^0.2.0-rc.1` 的元组是 `0.2.0`，而 DSH 现在是 `0.2.1-rc.2`（元组 `0.2.1`）——
+**不匹配**。用真实 semver 验过：
+
+| 范围 | 版本 | 是否满足 |
+| --- | --- | --- |
+| `^0.2.0-rc.1`（旧） | `0.2.1-rc.2` | ❌ **false** |
+| `^0.2.0-rc.1 \|\| ^0.2.1-rc.2`（新） | `0.2.1-rc.2` | ✅ true |
+| `^0.2.0-rc.1 \|\| ^0.2.1-rc.2`（新） | `0.2.0-rc.2` | ✅ true（向后兼容） |
+
+这不是理论问题：预发布期每升一个 patch，旧的预发布范围就自动失效一次，
+而 `^3.18.2` / `^4.0.2` 这类正式版本范围不受影响（3.18.5、4.0.5 都满足）。
+
+### 问题 2：插件自带旧副本，与宿主形成双份包
+
+对照同机其他**已适配**的插件，结论很一致——它们都**不带** `@deepseek-ai` 包：
+
+| 插件 | 版本 | 自带 node_modules |
+| --- | --- | --- |
+| `dsh-computer-use-win` | 0.2.5 | 无 |
+| `dsh-whale-widget` | 0.4.2 | 无 |
+| `browser-skill-dsh-plugin` | 0.3.2 | 无 |
+| `dsh-ssh` | 0.4.6 | 无 |
+| **`dsh-plugin-cdp`（本插件，改前）** | 0.2.0 | **有，且是旧版** |
+
+双份包在 ESM 下是两个独立模块实例；`schemastery` 这类靠 `instanceof`/内部标记
+识别对象的库，跨副本容易出隐蔽问题。这次把本地副本升到与宿主**逐版本一致**，
+即使仍有两份，语义也完全对齐。
+
+## 本次改了什么
+
+### 1. `package.json`
+
+- 版本 `0.2.0` → **`0.2.1`**
+- peer 范围补上 `^0.2.1-rc.2`：
+  `"@deepseek-ai/dsh-tools": "^0.1.5-rc.3 || ^0.2.0-rc.1 || ^0.2.1-rc.2"`
+  （沿用生态惯例：预发布版本逐个列举，参考 `dshmarket` 的写法）
+- 新增 `devDependencies`，把本地开发/测试用的包**钉死**到宿主同版本：
+  `cordis 4.0.5`、`dsh-tools 0.2.1-rc.2`、`schemastery 3.18.5`
+  （运行时仍由宿主提供，`devDependencies` 只为本地跑测试/自检）
+
+### 2. `lib/selftest.mjs`——去掉写死的旧路径
+
+原来硬编码：
+
+```
+file:///C:/Users/<用户名>/.dsh/profiles/node_modules/@deepseek-ai/dsh-tools/lib/index.js
+```
+
+两个毛病：机器专属；而且指向 **0.2.0-rc.2**，DSH 升级后
+「用宿主校验器验证输出」这个前提就失效了（校验器已经是另一个版本）。
+改为从插件自身解析 `@deepseek-ai/dsh-tools`，并**打印实际使用的版本**，
+避免再次悄悄校验了别的副本：
+
+```
+ℹ dsh-tools 校验器: v0.2.1-rc.2（应为宿主同版本，DSH 0.2.1-rc.2 = 0.2.1-rc.2）
+```
+
+### 3. `lib/jobs.test.mjs`——修一个和数据文件数量绑死的断言
+
+有一条断言写死 `sources.length === 1 + 15`（台账 + 15 个 `run-*.log`）。
+但 `extract()` 早就把 `*.ndjson` 也算数据源了，数据目录里后来多了
+`applied.ndjson` / `violations.ndjson`，实际变成 18 个，测试就误报失败。
+
+这不是版本适配问题，但会在适配验证时把水搅浑。改成**按目录内容实时推导期望值**，
+并把「所有数据文件都被纳入、路径不重复」作为真正的断言。
+
+### 4. 新增 `run-all-tests.mjs`
+
+一个总入口，跑 4 个测试文件 + 自检并汇总；退出码可直接接 CI。
+（原来要逐个手跑，容易漏。）
+
+## 验证结果
+
+- **单元测试 161 条全过**：jobs 27 / report 28 / plugin 62 / supervisor 44
+- **自检通过**：插件加载成功、注册 **15 个工具**、输出用 DSH 同版本校验器验过
+- **在运行中的真实 DSH 0.2.1-rc.2 里逐个实测 15 个工具**：
+
+| 工具 | 实测结果 |
+| --- | --- |
+| `cdp_status` / `cdp_browser_info` | ✅ |
+| `cdp_navigate` | ✅ 自动启动受控 Chrome |
+| `cdp_read` / `cdp_eval` / `cdp_screenshot` | ✅ 截图 1858×985 真实 PNG |
+| `cdp_new_tab` / `cdp_use_tab` | ✅ |
+| `cdp_apply_verified` | ✅ 选择器不存在时**优雅报错**（不崩） |
+| `cdp_prefs` | ✅ 返回完整偏好与问卷 |
+| `cdp_jobs_report` / `cdp_jobs_data` | ✅ 184 岗位 / 161 投递事件 / 18 数据源 |
+| `cdp_runner_status` | ✅ |
+| `cdp_runner_reload` | ✅ 启动 gen5 → 规则未变沿用 → 强制滚动 gen6 并让 gen5 退位 |
+| `cdp_runner_stop` | ✅ gen6 已停止 |
+
+## 升级指引
+
+如果你是从 0.2.0 升级：
+
+1. 插件本身只需更新到 0.2.1（`dsh plugin --profile desktop update dsh-plugin-cdp`，
+   或本地 `link:` 的话直接拉代码）
+2. **profile 里的 `@deepseek-ai` 包也要同步到 0.2.1-rc.2**。
+   本次排查发现 `C:\Users\<用户名>\.dsh\profiles\node_modules\@deepseek-ai\*`
+   仍是 0.2.0-rc.2（2026-10-13 装的），而应用已升到 0.2.1-rc.2（2026-10-17）——
+   应用更新不会自动刷新 profile 的依赖树。在 profile 目录执行一次
+   `pnpm install` 即可拉齐。**这一步影响所有插件，不只是本插件。**
+
+## 自查命令
+
+```powershell
+cd <插件目录>
+node run-all-tests.mjs
+```
+正常应输出：
+
+```
+✅ jobs.test.mjs          tests=27 pass=27 fail=0
+✅ report.test.mjs        tests=28 pass=28 fail=0
+✅ plugin.test.mjs        tests=1 pass=1 fail=0
+✅ supervisor.test.mjs    tests=1 pass=1 fail=0
+✅ selftest.mjs           注册工具数：15（…）
+     ℹ dsh-tools 校验器: v0.2.1-rc.2（应为宿主同版本，DSH 0.2.1-rc.2 = 0.2.1-rc.2）
+
+全部通过
+```
+
+---
+
+# 0.2.0（2026-10-13）—— 功能大幅扩展
+
 > 版本：`0.1.0` → 本轮功能大幅扩展
 > 日期：2026-10-13
 > 适用：DeepSeek Harness（DSH）桌面版 / Web 版
