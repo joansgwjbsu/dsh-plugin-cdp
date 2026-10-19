@@ -1,7 +1,7 @@
 url: https://github.com/joansgwjbsu/dsh-plugin-cdp
 name: joansgwjbsu/dsh-plugin-cdp
 category: browser
-tarball: https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/latest/download/dsh-plugin-cdp-0.2.1.tgz
+tarball: https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/latest/download/dsh-plugin-cdp-0.2.2.tgz
 description:
   en: Drives a self-managed Chrome instance over the Chrome DevTools Protocol through 15 tools, including a verified-click primitive that waits for the detail panel to settle and refuses when the panel content disagrees with the selected item; ships no rules of its own and instead collects user preferences through a popup questionnaire, renders job, salary and location data as zero-dependency Unicode charts and monospace tables, and hot-swaps a long-running worker by starting a new generation and confirming it is alive before retiring the old one.
   zh: 通过 15 个工具以 Chrome DevTools Protocol 驱动一个自管理的 Chrome 实例，其中包含一个「校验后再点击」的原语：等详情面板稳定、并在面板内容与所选项不一致时拒绝操作；插件本身不携带任何规则，改为用弹窗问卷收集用户偏好；把岗位、薪资、地点数据渲染成零依赖的 Unicode 图表与等宽表格；并以「先起新一代、确认存活，再让老一代退位」的方式热替换长驻运行器。
