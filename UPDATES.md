@@ -2,6 +2,94 @@
 
 ---
 
+# 0.2.2（2026-10-19）—— 声明 DSH 版本要求（engines.dsh）
+
+> 上一版：`0.2.1`
+> 本次：`0.2.2`，补上 DSH **真正会校验**的那个字段
+
+## 为什么要加 `engines.dsh`
+
+上一版把 `peerDependencies` 里的范围补成 `^0.2.1-rc.2` 之后，我原以为版本声明就对齐了。
+读了 DSH 0.2.1 的实现才发现：**DSH 有自己的兼容性判定，而且优先看 `engines.dsh`。**
+
+`@deepseek-ai/dsh-app-boot` 里的 `evaluatePluginCompatibility()`（插件安装/启动时真正调用它）：
+
+```js
+// 1) 若声明了 engines.dsh —— 它单独决定，peerDependencies 被忽略
+if (Object.hasOwn(engines, "dsh")) {
+  return satisfies(runtimeVersion, range) ? {} : { "engines.dsh": range };
+}
+// 2) 否则：每个 @deepseek-ai/dsh 或 @deepseek-ai/dsh-* 的 peer 都要匹配运行时版本
+for (const [name, range] of Object.entries(peerDependencies)) {
+  if (name !== "@deepseek-ai/dsh" && !name.startsWith("@deepseek-ai/dsh-")) continue;
+  if (!satisfies(runtimeVersion, range)) unmet[name] = range;
+}
+```
+
+以及判定本身：`semver.satisfies(runtimeVersion, range, { includePrerelease: true })`。
+
+这解释了两件事：
+
+1. **为什么旧版其实没被 DSH 拒**：`includePrerelease: true` 下 `^0.2.0-rc.1` 也能匹配
+   `0.2.1-rc.2`。但 **npm 安装时**用的是默认规则（预发布要求元组相同），
+   所以 `pnpm add` 会判不满足 —— 两套规则不一样，上一版的修复对安装是对的。
+2. **正确做法是声明 `engines.dsh`**：它是 DSH 一等公民的版本要求字段，
+   存在时单独决定兼容性，意图比「靠 peer 推断」明确得多。
+
+## 改了什么
+
+### `package.json`
+
+- 版本 `0.2.1` → **`0.2.2`**
+- 新增 `engines.dsh`：
+
+  ```json
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.0-rc.2 <0.3.0-0"
+  }
+  ```
+
+  为什么是这个范围（用真实 semver 逐版本验过）：
+
+  | 版本 | 命中 |
+  | --- | --- |
+  | `0.2.0-rc.2` / `0.2.1-rc.2` / `0.2.1` | ✅ 已知可运行 |
+  | `0.2.x` 任意版本、`0.2.9-rc.1` | ✅ 小版本内兼容 |
+  | `0.3.0-0` / `0.3.0-rc.1` / `0.3.0` | ❌ 上界用 `<0.3.0-0` 连 0.3 的预发布也挡住 |
+
+  用 `<0.3.0-0` 而不是 `<0.3.0` 是关键：后者在 includePrerelease 下会把
+  `0.3.0-rc.1` 也算作满足（它确实小于 0.3.0），等于提前放行未验证的大版本。
+
+### `lib/selftest.mjs` —— 用 DSH 官方函数验兼容性
+
+不再自己写 semver 断言，而是直接 import `@deepseek-ai/dsh-app-boot` 的
+`evaluatePluginCompatibility()` 跑一遍真判定，并加一条**反向对照**：
+把 `engines.dsh` 故意改成 `>=99.0.0`，必须被判为不兼容——
+否则「通过」可能只是函数恒返回 `undefined` 的假通过。
+
+自检输出会打印：
+
+```
+DSH 兼容性：通过（运行时 0.2.1-rc.2，engines.dsh=>=0.2.0-rc.2 <0.3.0-0）
+```
+
+`@deepseek-ai/dsh-app-boot@0.2.1-rc.2` 已加入 `devDependencies`（仅本地自检用，
+不随包分发，运行时由宿主提供）。
+
+## 关于 profile 里那份旧依赖
+
+排查时还发现 `~/.dsh/profiles/node_modules/@deepseek-ai/*` 下有 **249 个 Junction**
+指向一个 2026-08-14 的 npx 缓存（内含 DSH `0.2.0-rc.2`）。也就是说，
+从 profile 解析 peer 的插件（不含本插件——本插件自带 `node_modules`）拿到的仍是旧版本。
+
+**这次没有动它**，原因：`@wxg-prc-cpg/browser-skill-dsh-plugin` 依赖的
+`@deepseek-ai/dsh-client-ui-primitives` 在 0.2.1 里**已经被移除**，
+盲目整体升级会让那个插件直接起不来。正确做法是插件逐个跟上 0.2.1 后再统一升级。
+本插件通过自带依赖 + `engines.dsh` 声明，不受这份残留影响。
+
+---
+
 # 0.2.1（2026-10-19）—— 适配 DSH 0.2.1-rc.2
 
 > 上一版：`0.2.0`，为 DSH `0.2.0-rc.2` 编写
