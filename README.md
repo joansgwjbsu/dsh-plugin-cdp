@@ -116,7 +116,7 @@ npm i dsh-plugin-cdp
 
 ---
 
-## 工具一览（15 个）
+## 工具一览（16 个）
 
 | 工具 | 作用 |
 | --- | --- |
@@ -127,6 +127,7 @@ npm i dsh-plugin-cdp
 | `cdp_screenshot` | 截图到本地文件 |
 | `cdp_new_tab` / `cdp_use_tab` | 新建 / 切换受控标签页 |
 | `cdp_apply_verified` | **带校验的操作**：等详情面板稳定且薪资与卡片一致才点击，且拒绝重复操作 |
+| `cdp_resume_match` | **简历 × JD 匹配打分**：技能 / 方向 / 经验 / 学历，返回 0~1 分数与是否达标 |
 | `cdp_prefs` | 读取 / 写入偏好（含弹窗问卷） |
 | `cdp_browser_info` | 如实报告使用的浏览器与可执行文件是否存在 |
 | `cdp_jobs_report` | 岗位 / 薪资 / 地点文本可视化报告 |
@@ -153,6 +154,32 @@ npm i dsh-plugin-cdp
 
 ---
 
+## 简历 × JD 匹配（`cdp_resume_match`）
+
+它只回答一个问题：**这份招聘信息与这份简历有多像**，并给出可解释的分项。
+
+```text
+技能覆盖 55%  +  方向命中 25%  +  经验满足 12%  +  学历满足 8%
+```
+
+- 技能：JD 里提到的技术项，有多少出现在简历里（词表是通用 IT 术语，不是某个人的规则）
+- 方向：JD 的方向词（运维 / 网络 / 云计算 / 实施 / 技术支持 …）与简历意向是否有交集
+- 经验 / 学历：从 JD 解析要求、从简历解析实际值，算满足程度
+- 权重与达标线都**可配置**；插件不替使用者决定「多少分才投」
+
+```js
+cdp_resume_match({})                                  // 用当前页面当 JD + 配置里的简历
+cdp_resume_match({ text: jdText, threshold: 0.7 })    // 显式给 JD 与达标线
+```
+
+返回 `{ score, pass, parts, matched, missing, reasons }`，`reasons` 逐条说明打分依据。
+
+开启 `applyRequiresMatch: true` 后，`cdp_apply_verified` 在点击前会先算分，**未达标直接拒绝并返回原因**，不会「投了再说」。
+
+> 简历文本可以是 `.txt` / `.md`。PDF 需要先转成文本（例如 `pypdf` 提取），插件不做 PDF 解析。
+
+---
+
 ## 配置
 
 ```yaml
@@ -167,6 +194,9 @@ npm i dsh-plugin-cdp
     settleMs: 600                               # 导航后额外稳定等待
     prefsPath: "偏好落盘路径"
     stateDir: "运行器状态目录"
+    resumePath: ""                              # 简历文本文件（.txt/.md）；留空=匹配不可用
+    matchThreshold: 0.7                         # 达标线（只是默认值，使用者可改）
+    applyRequiresMatch: false                   # 是否让 cdp_apply_verified 强制要求达标
 ```
 
 > **注意**：受控实例使用**独立的用户目录**，不复用你日常浏览器的配置，因此需要在该实例里单独登录一次目标站点。
@@ -180,6 +210,7 @@ node --test lib/jobs.test.mjs          # 27 项
 node --test lib/report.test.mjs        # 28 项
 node lib/plugin.test.mjs               # 62 项
 node lib/supervisor.test.mjs           # 44 项
+node --test lib/match.test.mjs         # 11 项（简历匹配打分）
 node lib/selftest.mjs                  # 插件加载自检
 ```
 

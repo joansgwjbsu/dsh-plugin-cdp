@@ -20,6 +20,7 @@ const files = [
   'report.test.mjs',
   'plugin.test.mjs',
   'supervisor.test.mjs',
+  'match.test.mjs',
 ];
 
 const results = [];

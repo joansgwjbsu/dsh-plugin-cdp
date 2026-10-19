@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-cdp",
-  "version": "0.2.2",
-  "description": "DeepSeek Harness plugin: Chrome DevTools Protocol (CDP) automation with a managed Chrome instance, plus a popup-driven rule collector, text dashboards for job/salary/location data, and zero-downtime hot-swap of a long-running worker.",
+  "version": "0.3.0",
+  "description": "DeepSeek Harness plugin: Chrome DevTools Protocol (CDP) automation with a managed Chrome instance, popup-driven rule collection, resume↔JD match scoring, text dashboards for job/salary/location data, and zero-downtime hot-swap of a long-running worker.",
   "type": "module",
   "main": "lib/index.mjs",
   "exports": {
