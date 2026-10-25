@@ -31,28 +31,25 @@
 
 ## 下载
 
-固定版本（推荐——不受 `latest` 指向变化影响）：
+> ⚠️ 2026-10-25：因历史产物里带作者邮箱等个人信息，已**删除全部历史 Release 与 tag**（含 tgz）。
+> 下面的固定版本链接不再可用；需要旧版本请按上表的提交号自行 checkout 并 `npm pack`。
+> 当前推荐直接从仓库安装（见 README 的「安装」一节）。
 
 ```text
-https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/download/v0.2.2/dsh-plugin-cdp-0.2.2.tgz
-https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/download/v0.2.1/dsh-plugin-cdp-0.2.1.tgz
-https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/download/v0.2.0/dsh-plugin-cdp-0.2.0.tgz
-```
-
-始终指向最新版：
-
-```text
-https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/latest/download/dsh-plugin-cdp-0.2.2.tgz
+# 已删除（2026-10-25 隐私清理）
+# https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/download/v0.2.2/dsh-plugin-cdp-0.2.2.tgz
+# https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/download/v0.2.1/dsh-plugin-cdp-0.2.1.tgz
+# https://github.com/joansgwjbsu/dsh-plugin-cdp/releases/download/v0.2.0/dsh-plugin-cdp-0.2.0.tgz
 ```
 
 ---
 
 ## 安装后校验
 
-下载后应校验哈希（Windows PowerShell）：
+自行打包后应校验哈希（Windows PowerShell）：
 
 ```powershell
-Get-FileHash .\dsh-plugin-cdp-0.2.2.tgz -Algorithm SHA256
+Get-FileHash .\dsh-plugin-cdp-0.3.0.tgz -Algorithm SHA256
 ```
 
 也可直接解包确认清单里的版本与兼容声明：
