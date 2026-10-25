@@ -2,6 +2,131 @@
 
 ---
 
+# 0.3.0 适配 DSH 0.2.1-rc.3（2026-10-25）
+
+> 插件版本不变：仍是 `0.3.0`（尚未打 tag / 打包发布）
+> 本次：桌面端从 `0.2.1-rc.2` 更新到 `0.2.1-rc.3`，把「兼容声明 + 自检」对齐新版本，
+> 顺带修掉一处**一直在用旧校验器验证**的漏洞
+
+## 先量一下：rc.3 到底改了什么
+
+不靠猜。`app.asar` 内自带 `dsh/desktop-runtime.json`（运行时清单，逐文件 `bytes` / `sha256`），
+把新旧两份清单逐文件比对，得到确切变更集：
+
+| 项目 | 0.2.1-rc.2 | 0.2.1-rc.3 |
+| --- | --- | --- |
+| `release.version` | 0.2.1-rc.2 | **0.2.1-rc.3** |
+| `hostProtocolVersion` | 4 | **4（未变）** |
+| 内置 Node / pnpm | 24.21.0 / 11.28.5 | 24.21.0 / 11.28.5（未变） |
+| 清单文件数 | 17,261 | 17,141（+216 / −336 / ~507） |
+| `sharedPackages` | 304 个 | 305 个（+`dsh-client-ui-entry-customization`，296 个升版，8 个未变） |
+
+升版集中在**客户端 UI 与业务插件**（`dsh-experimental-inspector` 192 个文件、
+`dsh-client-ui-*` 一片），而**插件面向的那层 API 面逐字节没动**：
+
+| 包 | rc.3 里的改动 | 对本插件的含义 |
+| --- | --- | --- |
+| `@deepseek-ai/dsh-tools` | 只删了 `lib/types/invariant.js`，`package.json` 只改版本号；`lib/index.js`（`defineTool` / `validateJsonSchemaValue`）**未变** | 工具定义与输出校验行为不变 |
+| `@deepseek-ai/cordis` | **0 个文件变化**（仍 4.0.5） | `apply` / `inject` / `Config` 契约不变 |
+| `@deepseek-ai/schemastery` | **0 个文件变化**（仍 3.18.5） | `Schema.object` 不变 |
+| `@deepseek-ai/dsh-app-boot` | 只有 `package.json` 变 | 兼容性判定逻辑不变（`engines.dsh` 仍单独决定） |
+
+所以本次**没有改插件代码** —— 改的是「声明」和「自检」。
+
+## 改了什么（4 处）
+
+### 1. `devDependencies` 对齐到 0.2.1-rc.3
+
+```diff
+-    "@deepseek-ai/dsh-app-boot": "0.2.1-rc.2",
+-    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
++    "@deepseek-ai/dsh-app-boot": "0.2.1-rc.3",
++    "@deepseek-ai/dsh-tools": "0.2.1-rc.3",
+```
+
+为什么必须改：本插件的自检**用宿主的校验器**验输出（这是它存在的意义），
+而校验器来自 `devDependencies`。锁在 rc.2 就等于「拿旧宿主的规则验新宿主」。
+
+`cordis`（4.0.5）与 `schemastery`（3.18.5）不动 —— 运行时里它们本来就没升版。
+
+### 2. 修 `lib/plugin.test.mjs` 写死的旧校验器路径（真 bug）
+
+```diff
+-const { validateJsonSchemaValue } = await import(
+-  "file:///C:/Users/<用户名>/.dsh/profiles/node_modules/@deepseek-ai/dsh-tools/lib/index.js"
+-);
++const { validateJsonSchemaValue } = await import("@deepseek-ai/dsh-tools");
+```
+
+那个目录里留的是 2026-09 的 **0.2.0-rc.2** —— 比宿主落后**两个**版本。
+也就是说 0.2.1 那次适配只修了 `selftest.mjs` 的同款问题，**漏了这个文件**，
+于是「输出 schema 通过宿主校验」这条结论一直是拿旧校验器得出的。
+现在与 selftest 一致：从包解析，并在开头打印版本：
+
+```text
+插件层测试：返回值与报告文本一致性
+（输出校验器：@deepseek-ai/dsh-tools v0.2.1-rc.3）
+```
+
+### 3. 自检新增断言：校验器版本必须等于运行时版本
+
+只打印不够 —— 打印了没人看就白搭。`selftest.mjs` 把它变成断言：
+
+```js
+check(
+  dshToolsVersion === runtimeVersion,
+  `本地 dsh-tools v${dshToolsVersion} 与运行时 v${runtimeVersion} 不一致：输出校验用的不是宿主那一份校验器`,
+);
+```
+
+### 4. 去掉写死的绝对路径
+
+`lib/selftest.mjs` 里 `pathToFileURL("<插件目录>/lib/index.mjs")`
+改为 `new URL("./index.mjs", import.meta.url)`。原写法换台机器就 import 失败，
+公开仓库里也不该出现本机路径。
+
+## 验证
+
+```text
+✅ jobs.test.mjs       27/27
+✅ report.test.mjs     28/28
+✅ plugin.test.mjs      1/1    校验器 v0.2.1-rc.3
+✅ supervisor.test.mjs  1/1
+✅ match.test.mjs      11/11
+✅ selftest.mjs         16 个工具 · 校验器 v0.2.1-rc.3 · 兼容性通过
+```
+
+selftest 的兼容性判定直接调用 DSH 官方的 `evaluatePluginCompatibility()`：
+
+```text
+DSH 兼容性：通过（运行时 0.2.1-rc.3，engines.dsh=>=0.2.0-rc.2 <0.3.0-0）
+```
+
+**真实宿主实测**：在升级后的桌面端里调 `cdp_browser_info`，返回结构完整、
+通过 schema 校验 —— 模块加载、工具注册、输出校验三关都过（不是只在本机跑函数）。
+
+## 为什么 `engines.dsh` 不用改
+
+`>=0.2.0-rc.2 <0.3.0-0` 已覆盖 rc.3。判定带 `includePrerelease: true`：
+
+| 版本 | `>=0.2.0-rc.2 <0.3.0-0`（includePrerelease） |
+| --- | --- |
+| `0.2.1-rc.2` | ✅ |
+| `0.2.1-rc.3` | ✅ |
+| `0.3.0-rc.1` | ❌（被 `<0.3.0-0` 挡住） |
+
+`peerDependencies` 里的 `^0.2.1-rc.2` 同样覆盖 rc.3（元组同为 `0.2.1`；
+实测 `semver.satisfies("0.2.1-rc.3", "^0.2.1-rc.2") === true`），
+所以没必要再堆一行 `|| ^0.2.1-rc.3`，只是噪音。
+
+## 版本号为什么还是 0.3.0
+
+`0.3.0` 尚未打 tag、也没有发布产物（见 [RELEASES.md](./RELEASES.md)），
+本次适配并入它即可。要发布时：打 `v0.3.0` tag → `npm pack` 出 tarball →
+更新 RELEASES 矩阵、市场清单里的 tarball 链接。
+
+---
+
 # 0.3.0（2026-10-19）—— 简历 × JD 匹配打分
 
 > 上一版：`0.2.2`

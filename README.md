@@ -26,7 +26,7 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| DeepSeek Harness | **`>=0.2.0-rc.2 <0.3.0-0`**（即 `engines.dsh`，由 DSH 的兼容性判定直接校验）；**已验证 0.2.1-rc.2** |
+| DeepSeek Harness | **`>=0.2.0-rc.2 <0.3.0-0`**（即 `engines.dsh`，由 DSH 的兼容性判定直接校验）；**已验证 0.2.1-rc.2 / 0.2.1-rc.3** |
 | `@deepseek-ai/dsh-tools` | `^0.1.5-rc.3 \|\| ^0.2.0-rc.1 \|\| ^0.2.1-rc.2`（peer，由宿主提供） |
 | `@deepseek-ai/schemastery` | `^3.18.2`（peer，由宿主提供） |
 | `@deepseek-ai/cordis` | `^4.0.2`（peer，由宿主提供） |
@@ -37,8 +37,12 @@
 > 本插件声明 `>=0.2.0-rc.2 <0.3.0-0`：覆盖已验证的 0.2.x，并用 `<0.3.0-0`
 > 挡住 0.3 的预发布版本（`<0.3.0` 在 `includePrerelease` 下会误放行 `0.3.0-rc.1`）。
 
-> **注意**：DSH 升级后，请确认 profile 里的 `@deepseek-ai` 包也已拉齐到同版本。
-> 应用更新**不会**自动刷新 profile 的依赖树。详见 [UPDATES.md](./UPDATES.md)。
+> **注意**：DSH 升级后要拉齐两处 —— ① profile 里的 `@deepseek-ai` 包
+> （应用更新**不会**自动刷新 profile 的依赖树）；② 仓库里 `devDependencies` 指向的
+> `dsh-tools` / `dsh-app-boot`（在仓库目录跑一次 `npm install`）。第二处不是洁癖：
+> 自检与测试**用宿主的校验器**验输出，本地版本落后时 `selftest.mjs` 会直接判失败
+> （「输出校验用的不是宿主那一份校验器」），而不是给出一个假的「通过」。
+> 详见 [UPDATES.md](./UPDATES.md)。
 
 各版本的封装产物、SHA256 与「该用哪个版本」见 **[RELEASES.md](./RELEASES.md)**。
 

@@ -2,8 +2,9 @@
 
 本文件记录**每个已发布版本**的封装产物、DSH 兼容范围与校验值，供回退或按 DSH 版本选择插件时使用。
 
-> ⚠️ 仓库里开发中的版本号不代表已发布。当前 `package.json` 是 `0.3.0`（新增简历 × JD 匹配），
-> **尚未打包发布**；下表三个是它之前的已发布产物。
+> ⚠️ 仓库里开发中的版本号不代表已发布。当前 `package.json` 是 `0.3.0`（新增简历 × JD 匹配，
+> 并于 2026-10-25 **适配 DSH 0.2.1-rc.3**），**尚未打 tag / 打包发布**；
+> 下表三个是它之前的已发布产物。
 
 > 说明：本文件是**仓库级文档**，不随 npm tarball 分发（`package.json` 的 `files` 未包含它）。
 > 各版本的 tarball 由 `npm pack` 从对应 git tag 构建，哈希如下。
@@ -66,6 +67,8 @@ Get-Content "$env:TEMP\package\package.json" | Select-String 'version|engines|ds
 ## 如何选择版本
 
 - **DSH ≥ 0.2.0-rc.2**：用 **v0.2.2**（首次声明 `engines.dsh`，DSH 的兼容性判定可直接识别）。
+  它在 `0.2.1-rc.2` / `0.2.1-rc.3` 上都仍然可用 —— 这两个运行时之间，
+  插件面向的 API 面（`defineTool` / `Schema` / `ctx.tools`）逐字节未变（证据见 [UPDATES.md](./UPDATES.md)）。
 - **需要与 v0.2.1 行为完全一致**（例如排查回归）：可回退到 **v0.2.1**。
   v0.2.1 与 v0.2.2 的**插件代码完全相同**，差异只在 `package.json`
   的版本号与 `engines.dsh` 声明——所以功能上可互换。
