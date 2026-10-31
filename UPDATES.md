@@ -2,6 +2,115 @@
 
 ---
 
+# 0.3.0 适配 DSH 0.2.1-rc.5（2026-10-31）
+
+> 插件版本不变：仍是 `0.3.0`（尚未打 tag / 打包发布）
+> 本次：桌面端从 `0.2.1-rc.3` 跳到 `0.2.1-rc.5`（中间跳过了 rc.4），
+> 把兼容声明与开发依赖对齐新版本，并解决了适配过程中暴露的一个真问题。
+
+## 先量一下：rc.5 到底改了什么
+
+仍然不靠猜。`app.asar` 内自带 `dsh/desktop-runtime.json`（运行时清单），读出来即可：
+
+| 项目 | 0.2.1-rc.3 | 0.2.1-rc.5 |
+| --- | --- | --- |
+| `release.version` | 0.2.1-rc.3 | **0.2.1-rc.5** |
+| `hostProtocolVersion` | 4 | **4（未变）** |
+| 内置 Node / pnpm | 24.21.0 / 11.28.5 | 24.21.0 / 11.28.5（未变） |
+| `sharedPackages` | 305 个 | 305 个 |
+| `@deepseek-ai/cordis` | 4.0.5 | **4.0.5（未变）** |
+| `@deepseek-ai/schemastery` | 3.18.5 | **3.18.5（未变）** |
+| `@deepseek-ai/dsh-tools` | 0.2.1-rc.3 | 0.2.1-rc.5 |
+
+插件面向的两个关键包（cordis 的 `apply`/`inject` 契约、schemastery 的 `Schema.object`）**逐版本未动**，
+所以不需要改插件代码。
+
+## API 面核对
+
+rc.5 的 `@deepseek-ai/dsh-tools/lib/index.js` 导出表里仍然包含插件用到的两个符号：
+
+```
+defineTool ✓        validateJsonSchemaValue ✓
+```
+
+（插件只在测试与 selftest 里用到 `validateJsonSchemaValue`，运行时代码不依赖 dsh-tools。）
+
+## 适配中暴露的真问题：rc.5 的 dsh-tools 带了一整排 peerDependencies
+
+这是本次唯一不顺利的地方，值得记下来。
+
+`@deepseek-ai/dsh-tools@0.2.1-rc.5` 的 `peerDependencies` 从 rc.3 时的稀疏状态变成 **11 个强绑定**，
+全部要求精确 `0.2.1-rc.5`：
+
+```
+dsh-agent, dsh-ptc-runtime, dsh-llm, dsh-scope, dsh-session,
+dsh-system-prompt, dsh-user-approval, dsh-sandbox, dsh-sandbox-policy,
+dsh-working-directory
+```
+
+在真实宿主里这些包由 DSH 自己提供，问题不大；但在**插件仓库里独立跑测试**时，
+`import("@deepseek-ai/dsh-tools")` 会一路 `ERR_MODULE_NOT_FOUND`（先是 `dsh-scope`，补上后又变 `dsh-llm`，是条链）。
+
+试过但不可行的路：
+
+| 做法 | 结果 |
+| --- | --- |
+| `npm install` | `ERESOLVE`：rc.5 的 dsh-tools 要求 `dsh-llm@0.2.1-rc.5`，而仓库没有 |
+| `npm install --legacy-peer-deps` | 能装，但只装到 dsh-tools 本身，peer 链仍然缺 |
+| `npm install --no-save <peer 包>` | 能暂时补上，但**下一次 `npm install` 会把 `--no-save` 装的包删掉**（实测 "removed 3 packages"，dsh-scope 又被删了） |
+
+最终方案：**直接从宿主 `app.asar` 里把依赖树原样取出来**。
+新增 `tools/vendor-dsh-deps.mjs`，从 `dsh-tools` / `dsh-app-boot` 出发递归收集
+`dependencies` + `peerDependencies` 里的 `@deepseek-ai/*`，再按归档里的 offset 原样写出：
+
+```
+需要 33 个包
+写入 1482 个文件，12.9 MB -> node_modules/@deepseek-ai
+```
+
+这样做的好处不只是"能跑"——**测试跑的就是宿主那一份实现**，版本逐字节一致，不存在"本地装的和线上宿主不是一个版本"的假绿。
+
+## 改了什么（3 处）
+
+### 1. `devDependencies` 对齐 0.2.1-rc.5
+
+```diff
+- "@deepseek-ai/dsh-app-boot": "0.2.1-rc.3",
+- "@deepseek-ai/dsh-tools": "0.2.1-rc.3",
++ "@deepseek-ai/dsh-app-boot": "0.2.1-rc.5",
++ "@deepseek-ai/dsh-tools": "0.2.1-rc.5",
+  "@deepseek-ai/schemastery": "3.18.5"
+```
+
+`peerDependencies` 未改：`@deepseek-ai/dsh-tools` 的范围已含 `^0.2.1-rc.2`，
+按 semver 该范围覆盖 `0.2.1-rc.5`；`engines.dsh` 的 `>=0.2.0-rc.2 <0.3.0-0` 同样覆盖。
+
+### 2. 新增 `tools/vendor-dsh-deps.mjs`
+
+见上。`--dry-run` 可先看要写多少文件；`node_modules/` 在 `.gitignore` 里，
+所以 clone 后需要自己跑一次这个脚本再执行测试。
+
+### 3. 文档
+
+本文件与 `RELEASES.md` 的说明。
+
+## 验证
+
+```
+✅ jobs.test.mjs          tests=27 pass=27 fail=0
+✅ report.test.mjs        tests=28 pass=28 fail=0
+✅ plugin.test.mjs        tests=1  pass=1  fail=0
+✅ supervisor.test.mjs    tests=1  pass=1  fail=0
+✅ match.test.mjs         tests=11 pass=11 fail=0
+✅ selftest.mjs           注册工具数：16
+   ℹ dsh-tools 校验器: v0.2.1-rc.5（须与宿主同版本）
+```
+
+selftest 原本在 rc.3 下打印 `v0.2.1-rc.3`，现在与宿主一致为 `v0.2.1-rc.5` ——
+这一行是判断"插件是否真的适配了当前宿主"最直接的信号。
+
+---
+
 # 0.3.0 适配 DSH 0.2.1-rc.3（2026-10-25）
 
 > 插件版本不变：仍是 `0.3.0`（尚未打 tag / 打包发布）
