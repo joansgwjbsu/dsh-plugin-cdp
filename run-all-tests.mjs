@@ -44,6 +44,18 @@ for (const file of files) {
   }
 }
 
+// 生成脚本校验：applyFlow 返回的是一段要送进 CDP evaluate 的字符串，
+// 它的语法错误不会被 node --test 覆盖，也不会在 import 时报出来。
+{
+  const r = spawnSync(process.execPath, [join(libDir, 'applyflow.codegen.check.mjs')], { encoding: 'utf8' });
+  const ok = r.status === 0;
+  if (!ok) failed += 1;
+  console.log(`${ok ? '✅' : '❌'} ${'applyflow.codegen'.padEnd(22)} 生成的页面脚本语法`);
+  if (!ok) {
+    for (const l of `${r.stdout || ''}${r.stderr || ''}`.split('\n').filter(Boolean).slice(0, 8)) console.log(`     ${l.trim()}`);
+  }
+}
+
 if (!quick) {
   const r = spawnSync(process.execPath, [join(libDir, 'selftest.mjs')], { encoding: 'utf8' });
   const out = `${r.stdout || ''}${r.stderr || ''}`;
