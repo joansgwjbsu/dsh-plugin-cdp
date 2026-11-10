@@ -6,13 +6,37 @@
 // 用 npm 装不行：peer 版本互相咬合，--legacy-peer-deps 装完下一次 install 又会把 --no-save 的删掉。
 // 所以直接从宿主归档里取，版本与宿主逐字节一致，也顺便证明插件适配的是宿主那一份实现。
 //
-// 用法：node tools/vendor-dsh-deps.mjs [--dry-run]
+// 用法：node tools/vendor-dsh-deps.mjs --asar <app.asar 路径> [--out <目录>] [--dry-run]
+//   也可用环境变量：DSH_ASAR / VENDOR_OUT
+//   输出目录默认是本仓库的 node_modules/@deepseek-ai（相对脚本位置推导，不写死绝对路径）。
 import { openSync, readSync, closeSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ASAR = 'D:\\deepseek\\resources\\app.asar';
-const OUT_ROOT = 'D:\\dsh\\dsh-plugin-cdp\\node_modules\\@deepseek-ai';
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(HERE, '..');
+const argOf = (flag) => {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : '';
+};
+
+const ASAR = process.env.DSH_ASAR || argOf('--asar');
+const OUT_ROOT =
+  process.env.VENDOR_OUT || argOf('--out') || join(ROOT, 'node_modules', '@deepseek-ai');
 const DRY = process.argv.includes('--dry-run');
+
+if (!ASAR) {
+  console.error(
+    '缺少 DSH 的 app.asar 路径。\n' +
+      '  node tools/vendor-dsh-deps.mjs --asar <DSH 安装目录>/resources/app.asar\n' +
+      '  或设置环境变量 DSH_ASAR',
+  );
+  process.exit(2);
+}
+if (!existsSync(ASAR)) {
+  console.error(`app.asar 不存在：${ASAR}`);
+  process.exit(2);
+}
 
 const fd = openSync(ASAR, 'r');
 const sb = Buffer.alloc(16);

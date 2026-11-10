@@ -1,6 +1,8 @@
 node_modules/
 *.tgz
 *.log
+# 测试夹具里的运行日志是仓库资产，不能被 *.log 吃掉
+!lib/__fixtures__/*.log
 .DS_Store
 Thumbs.db
 
