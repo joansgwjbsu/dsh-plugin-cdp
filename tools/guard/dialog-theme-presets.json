@@ -1,0 +1,46 @@
+{
+  "default": "slate",
+  "note": "弹窗配色模板。来自 2026-11-09 的三套方案（01 靛蓝可信 / 02 青绿清爽 / 03 石墨蓝专业）。platform-guard.ps1 读取本文件渲染；set-dialog-color.ps1 可切换预设或自定义主色。",
+  "presets": {
+    "indigo": {
+      "name": "靛蓝可信",
+      "desc": "稳重、熟悉，蓝紫风格",
+      "accent": "#4E63C2",
+      "headerFrom": "#4359B8",
+      "headerTo": "#586DC9",
+      "selBg": "#EEF1FC",
+      "selBorder": "#BBC6E8"
+    },
+    "teal": {
+      "name": "青绿清爽",
+      "desc": "清晰轻盈，强调稳定与安全感",
+      "accent": "#12838D",
+      "headerFrom": "#087F8C",
+      "headerTo": "#11949A",
+      "selBg": "#EAF6F5",
+      "selBorder": "#B8D9D8"
+    },
+    "slate": {
+      "name": "石墨蓝专业",
+      "desc": "克制沉稳，偏工具与管理后台",
+      "accent": "#355478",
+      "headerFrom": "#26364F",
+      "headerTo": "#49627D",
+      "selBg": "#EAF0F6",
+      "selBorder": "#C2CFDB"
+    }
+  },
+  "shared": {
+    "errBg": "#FFF5F2",
+    "errBorder": "#F6D6CE",
+    "errBar": "#E8745C",
+    "errTag": "#9B6358",
+    "errText": "#B8402F",
+    "title": "#1D2740",
+    "muted": "#758098",
+    "label": "#536078",
+    "text": "#34405C",
+    "border": "#DCE2EF",
+    "sep": "#E9EDF4"
+  }
+}
