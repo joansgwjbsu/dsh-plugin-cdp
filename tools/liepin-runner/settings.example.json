@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "description": "示例配置。复制为 settings.json 后按需修改；路径可写相对 dataRoot 的相对路径，也可写绝对路径。",
+  "dataRoot": ".",
+  "platform": "liepin",
+  "browserSkill": {
+    "autoStart": false
+  },
+  "paths": {
+    "log": "lp-ext-run.log",
+    "health": "lp-ext-health.json",
+    "queue": "liepin-queue.txt",
+    "done": "liepin-done.txt",
+    "companyDay": "liepin-company-day.txt",
+    "applied": "applied.ndjson",
+    "pause": "platform-pause.json",
+    "flowScript": "lp-ext-one.js",
+    "accountCheckScript": "lp-account-check.js",
+    "violations": "violations.ndjson",
+    "platformGuardScript": "platform-guard.ps1",
+    "runnerLibrary": "runner-lib.ps1",
+    "blockedCompaniesLibrary": "blocked-companies.ps1"
+  },
+  "behavior": {
+    "defaultEndHour": 11,
+    "defaultEndMinute": 30,
+    "defaultLoadWaitSeconds": 10,
+    "defaultGapMinSeconds": 60,
+    "defaultGapMaxSeconds": 180,
+    "closeAgentLiepinAndBlankTabsOnExit": true
+  }
+}
