@@ -157,6 +157,24 @@ if ($st -and $st.daemon_version -and (-not $st.browsers -or $st.browsers.Count -
 }
 
 $ready = $true
+# 选浏览器：settings.json 的 browserSkill.instanceId 优先。
+# 2026-11-13：受控 Chrome 也装了 BrowserSkill 扩展（instance 38985223 / ext 0.5.0），
+# 于是可能同时有「用户自己的 Chrome」和「受控 Chrome」连着 daemon。
+# 原来取 browsers[0]，谁排前面用谁 —— 会出现「以为在受控 profile 里跑，其实在你窗口里」的错位。
+# 钉死实例后，指定实例没连上就明确失败，不静默改用别的浏览器。
+function Select-BskBrowser($browsers) {
+  $list = @($browsers)
+  if ($list.Count -eq 0) { return $null }
+  $want = [string]$script:Config.browserSkill.instanceId
+  if ($want) {
+    $hit = $list | Where-Object { "$($_.instance_id)" -eq $want } | Select-Object -First 1
+    if ($hit) { return $hit }
+    Log "  !! 配置钉死实例 $want，但它没有连上；当前连接：$(($list | ForEach-Object { $_.instance_id }) -join ', ')"
+    return $null
+  }
+  return $list[0]
+}
+
 if (-not $st -or -not $st.daemon_version) {
   Log '!! bsk daemon 仍不可用，放弃本次投递'
   $ready = $false
@@ -164,9 +182,13 @@ if (-not $st -or -not $st.daemon_version) {
   Log '!! 仍没有浏览器连上扩展，放弃本次投递'
   $ready = $false
 } else {
-  $b = $st.browsers[0]
-  Log "扩展就绪：实例 $($b.instance_id) / 扩展 $($b.extension_version) / 协议 $($b.extension_protocol_version)（daemon $($st.daemon_version)/$($st.protocol_version)）"
-  $Browser = $b.instance_id
+  $b = Select-BskBrowser $st.browsers
+  if (-not $b) {
+    $ready = $false
+  } else {
+    Log "扩展就绪：实例 $($b.instance_id) / 扩展 $($b.extension_version) / 协议 $($b.extension_protocol_version)（daemon $($st.daemon_version)/$($st.protocol_version)）"
+    $Browser = $b.instance_id
+  }
 }
 if (-not $ready) {
   Log '=== 收工：前置条件不满足，未投递 ==='
@@ -363,9 +385,9 @@ if (-not $lpCheck) {
 function Get-LpBrowser {
   $p = Test-BskDaemon
   if (-not $p.Alive) { return $null }
-  $bs = @($p.Status.browsers)
-  if ($bs.Count -eq 0) { return $null }
-  return "$($bs[0].instance_id)"
+  $b = Select-BskBrowser $p.Status.browsers
+  if (-not $b) { return $null }
+  return "$($b.instance_id)"
 }
 
 # daemon 重启后扩展一般 2-4 秒自己重连；连不上不是「daemon 没起来」，要分开报。

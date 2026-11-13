@@ -4,7 +4,8 @@
   "dataRoot": ".",
   "platform": "liepin",
   "browserSkill": {
-    "autoStart": false
+    "autoStart": false,
+    "instanceId": ""
   },
   "paths": {
     "log": "lp-ext-run.log",

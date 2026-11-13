@@ -32,6 +32,7 @@
 | --- | --- |
 | `dataRoot` | 数据根目录；`paths` 里的相对路径都相对它解析 |
 | `browserSkill.autoStart` | 对应环境变量 `BSK_AUTO_START` |
+| `browserSkill.instanceId` | 钉死用哪个浏览器实例（`bsk status` 里的 `instance_id`）。留空 = 用第一个连上的。钉死后若该实例没连上，脚本会明确报错并拒绝启动，不会静默改用别的浏览器 |
 | `paths.*` | 所有输入/输出文件；可写绝对路径覆盖 |
 | `behavior.default*` | 时间窗、加载等待、条间间隔的默认值（命令行参数优先） |
 | `behavior.closeAgentLiepinAndBlankTabsOnExit` | 结束时是否清理 agent 残留标签 |
